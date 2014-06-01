@@ -1,0 +1,33 @@
+@(title: String)(content: String)
+
+<!DOCTYPE html>
+
+<html>
+<head>
+	<title>@title</title>
+	<link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+	<link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+
+	<link rel="stylesheet" href="@routes.Assets.at("stylesheets/jstree-3.0.0/default/style.min.css")" />
+
+	<script src="@routes.Assets.at("javascripts/jstree-3.0.0/libs/jquery.js")"></script>
+	<script src="@routes.Assets.at("javascripts/jstree-3.0.0/jstree.min.js")"></script>
+
+	<script src="@routes.Assets.at("javascripts/nxt.js")"></script>
+
+	<script>
+
+	console.log('@content');
+
+		$(document).ready(function() {
+			//renderTree('@content');
+		});
+
+</script>
+
+</head>
+<body>
+	<!--  @content -->
+	<div id="nxt_tree"></div>
+</body>
+</html>
