@@ -1,5 +1,5 @@
 function renderTree(json) {
-    $('#nxt_tree').jstree({
+    $('#chat_tree').jstree({
         "core": {
             'data': json
         }

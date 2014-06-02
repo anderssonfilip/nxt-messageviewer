@@ -1,4 +1,4 @@
-@(title: String)(content: String)
+@(title: String)(count: Int)
 
 <!DOCTYPE html>
 
@@ -17,17 +17,21 @@
 
 	<script>
 
-	console.log('@content');
+	$(document).ready(function() {
 
-		$(document).ready(function() {
-			//renderTree('@content');
-		});
+		$.getJSON('/tree',
+			function(data) {
+				renderTree(JSON.parse(data));
+			});
+	});
 
 </script>
 
 </head>
 <body>
-	<!--  @content -->
-	<div id="nxt_tree"></div>
+<div>
+<h4 style="display:inline">Number of messages: <h1 style="display:inline">@count</h1></h4>
+</div>
+	<div id="chat_tree"></div>
 </body>
 </html>

@@ -6,26 +6,25 @@ import play.mvc.*;
 
 import views.html.*;
 import models.*;
-import org.json.JSONObject;
+import static play.libs.Json.toJson;
 
 
 public class Application extends Controller {
 
     public static Result index() {
 
-//String, HashMap<String, List<Tuple2<String, String>>>> conversations = readDatabase();
+        return ok(main.render("NXT Message Viewer", 2));
+    }
+
+    public static Result tree() {
 		HashMap<String, List<Tuple2<String, String>>> conversations = new HashMap<String, List<Tuple2<String, String>>>();
       	List<Tuple2<String, String>> messages = new ArrayList<Tuple2<String, String>>();
         
         messages.add(new Tuple2<String, String>("hello", "123"));
 		conversations.put("923423", messages);
 
-		JSONObject json = new JSONObject(conversations);
+		String json = "[{\"text\" : \"Sender\", \"icon\":\"http://jstree.com/tree.png\", \"children\" : [{\"text\" : \"Recipient 1\", \"children\": [\"Message 1\"]},{\"text\" : \"Recipient 2\", \"children\": [\"Message 2\"] }] }]";
 
-		String strjson = "[\"Simple root node\",{\"text\" : \"Root node 2\",state\" : {\"opened\" : true,\"selected\" : true},\"children\" : [{ \"text\" : \"Child 1\"},\"Child 2]}]";
-		System.out.println(json.toString());		
-                    
-        return ok(main.render("NXT Message Viewer", json.toString()));
+      	return ok(toJson(json));
     }
-
 }
