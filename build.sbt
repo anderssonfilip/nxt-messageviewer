@@ -7,10 +7,11 @@ lazy val root = (project in file(".")).enablePlugins(PlayJava)
 scalaVersion := "2.11.1"
 
 libraryDependencies ++= Seq(
-  javaJdbc,
+  //javaJdbc,
   javaEbean,
   cache,
   javaWs,
-  "org.json" % "json" % "20140107",
-  "com.h2database" % "h2" % "1.4.178"
+  //"org.json" % "json" % "20140107",
+  "com.h2database" % "h2" % "1.4.178",
+  "com.google.code.gson" % "gson" % "2.2.4"
 )

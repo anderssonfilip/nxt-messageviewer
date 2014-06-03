@@ -6,7 +6,6 @@
 <head>
 	<title>@title</title>
 	<link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
-	<link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
 
 	<link rel="stylesheet" href="@routes.Assets.at("stylesheets/jstree-3.0.0/default/style.min.css")" />
 
@@ -19,9 +18,9 @@
 
 	$(document).ready(function() {
 
-		$.getJSON('/tree',
+		$.getJSON('/jsontree',
 			function(data) {
-				renderTree(JSON.parse(data));
+				renderTree(data);
 			});
 	});
 

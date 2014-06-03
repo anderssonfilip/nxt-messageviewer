@@ -9,3 +9,5 @@ GET     /                           controllers.Application.index()
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
 GET     /tree                       controllers.Application.tree()
+
+GET     /jsontree                   controllers.Application.jsontree()
