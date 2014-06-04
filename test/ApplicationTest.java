@@ -12,7 +12,6 @@ import java.util.List;
 import static org.fest.assertions.Assertions.*;
 import static play.test.Helpers.*;
 
-
 /**
  * Simple (JUnit) tests that can call all parts of a play app.
  * If you are interested in mocking a whole application, see the wiki for more details.
@@ -40,10 +39,8 @@ public class ApplicationTest {
         messages.add(new Tuple2<String, String>("hello", "123"));
         conversations.put("923423", messages);
 
-        String r = controllers.Application.toJSON(messages);
+        String r = controllers.Application.buildTree(messages);
 
         assertThat(false);
     }
-
-
 }

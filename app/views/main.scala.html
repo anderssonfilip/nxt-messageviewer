@@ -1,4 +1,4 @@
-@(title: String)(count: Int)
+@(title: String)(messageCount: String)
 
 <!DOCTYPE html>
 
@@ -14,23 +14,27 @@
 
 	<script src="@routes.Assets.at("javascripts/nxt.js")"></script>
 
-	<script>
+<script>
 
 	$(document).ready(function() {
 
 		$.getJSON('/jsontree',
 			function(data) {
 				renderTree(data);
+				$.getJSON('/messageCount',
+					function(count){
+						$('#messageCount').text('Number of messages: ' + count);
+					});				
 			});
 	});
 
-</script>
+	</script>
 
 </head>
 <body>
-<div>
-<h4 style="display:inline">Number of messages: <h1 style="display:inline">@count</h1></h4>
-</div>
+	<div>
+		<h2><span id="messageCount">@messageCount</span></h2>
+	</div>
 	<div id="chat_tree"></div>
 </body>
 </html>
