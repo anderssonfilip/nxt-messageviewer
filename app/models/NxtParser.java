@@ -1,82 +1,111 @@
 package models;
 
+import actors.MainActor;
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import scala.concurrent.duration.Duration;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 public class NxtParser {
 
     private static final char[] hexChars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
     private static int _messageCount;
+    private static int _maxHeight;
 
-    public static TreeMap<String, HashMap<String, List<Tuple2<String, String>>>> readDatabase(String h2Url) {
+    private static ActorSystem system = null;
 
-        HashMap<String, HashMap<String, List<Tuple2<String, String>>>> conversations = new HashMap<>();
+    private static HashMap<String, HashMap<String, List<Tuple2<String, Integer>>>> conversations;
 
-        Connection conn;
-        Statement stat;
-        try {
-            conn = DriverManager.getConnection(h2Url, "sa", "sa");
-            stat = conn.createStatement();
+    public static HashMap<String, HashMap<String, List<Tuple2<String, Integer>>>> AddMessage() {
+        return conversations;
+    }
 
-            _messageCount = 0;
+    public static HashMap<String, HashMap<String, List<Tuple2<String, Integer>>>> readDatabase(String h2Url) {
 
-            ResultSet rs = stat.executeQuery("select id, sender_id, recipient_id, height, attachment_bytes from transaction where type = 1 AND subtype = 0 order by height asc");
-            while (rs.next()) {
+        if (conversations != null) {
+            return conversations;
+        } else {
+            conversations = new HashMap<>();
 
-                _messageCount++;
+            Connection conn;
+            Statement stat;
+            try {
+                conn = DriverManager.getConnection(h2Url, "sa", "sa");
+                stat = conn.createStatement();
 
-                String sender = rs.getString("sender_id");
-                String recipient = rs.getString("recipient_id");
-                String height = rs.getString("height");
-                String attachment_bytes = rs.getString("attachment_bytes");
+                _messageCount = 0;
 
-                String message = convertHexToString(attachment_bytes);
+                ResultSet rs = stat.executeQuery("select id, sender_id, recipient_id, height, attachment_bytes from transaction where type = 1 AND subtype = 0 order by height asc");
+                while (rs.next()) {
 
-                if (sender.equals(recipient)) { // skip messages sent to self
-                    continue;
-                }
+                    _messageCount++;
 
-                if (isBinaryMessage(message)) {
-                    continue;
-                }
+                    String sender = rs.getString("sender_id");
+                    String recipient = rs.getString("recipient_id");
+                    int height = rs.getInt("height");
+                    String attachment_bytes = rs.getString("attachment_bytes");
 
-                if (message.trim().isEmpty()) {
-                    continue;
-                }
+                    String message = convertHexToString(attachment_bytes);
 
-                if (conversations.containsKey(recipient)) {
-                    if (conversations.get(recipient).containsKey(sender)) {
-                        conversations.get(recipient).get(sender).add(new Tuple2<>(message, height));
+                    if (sender.equals(recipient)) { // skip messages sent to self
+                        continue;
                     }
-                } else {
-                    List<Tuple2<String, String>> messages = new ArrayList<>();
-                    messages.add(new Tuple2<>(message, height));
 
-                    if (conversations.containsKey(sender) && conversations.get(sender).containsKey(recipient)) {
-                        conversations.get(sender).get(recipient).add(new Tuple2<>(message, height));
-                    } else if (conversations.containsKey(sender)) {
-                        conversations.get(sender).put(recipient, messages);
+                    if (isBinaryMessage(message)) {
+                        continue;
+                    }
+
+                    if (message.trim().isEmpty()) {
+                        continue;
+                    }
+
+                    if (conversations.containsKey(recipient)) {
+                        if (conversations.get(recipient).containsKey(sender)) {
+                            conversations.get(recipient).get(sender).add(new Tuple2<>(message, height));
+                        }
                     } else {
-                        HashMap<String, List<Tuple2<String, String>>> intro = new HashMap<>();
+                        List<Tuple2<String, Integer>> messages = new ArrayList<>();
+                        messages.add(new Tuple2<>(message, height));
 
-                        intro.put(recipient, messages);
-                        conversations.put(sender, intro);
+                        if (conversations.containsKey(sender) && conversations.get(sender).containsKey(recipient)) {
+                            conversations.get(sender).get(recipient).add(new Tuple2<>(message, height));
+                        } else if (conversations.containsKey(sender)) {
+                            conversations.get(sender).put(recipient, messages);
+                        } else {
+                            HashMap<String, List<Tuple2<String, Integer>>> intro = new HashMap<>();
+
+                            intro.put(recipient, messages);
+                            conversations.put(sender, intro);
+                        }
                     }
+
+                    if (height > _maxHeight)
+                        _maxHeight = height;
                 }
+                stat.close();
+                conn.close();
+            } catch (SQLException ex) {
+                System.out.println(ex);
+            } finally {
+
             }
-            stat.close();
-            conn.close();
-        } catch (SQLException ex) {
-            System.out.println(ex);
-        } finally {
 
+            if (system == null) {
+                system = ActorSystem.create("actorSystem");
+                ActorRef a = system.actorOf(Props.create(MainActor.class), "mainActor");
+
+                system.scheduler().scheduleOnce(Duration.create(5, TimeUnit.SECONDS), a, _maxHeight, system.dispatcher(), null);
+            }
+
+            return conversations;
         }
-
-        return new TreeMap<>(conversations);
     }
 
     public static int getMessageCount() {
