@@ -1,0 +1,60 @@
+@(title: String)(messageCount: String)
+
+<!DOCTYPE html>
+
+<html>
+<head ng-app="nxtApp">
+	<title>@title</title>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular.min.js"></script>
+
+	<link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+
+	<link rel="stylesheet" href="@routes.Assets.at("stylesheets/jstree-3.0.0/default/style.min.css")" />
+
+	<script src="@routes.Assets.at("javascripts/jstree-3.0.0/libs/jquery.js")"></script>
+	<script src="@routes.Assets.at("javascripts/jstree-3.0.0/jstree.min.js")"></script>
+
+	<!--	<script src="@routes.Assets.at("javascripts/angular.js")"></script>-->
+
+	<script src="@routes.Assets.at("javascripts/nxt.js")"></script>
+
+	<script>
+
+		$(document).ready(function() {
+
+			$.getJSON('/jsontree',
+				function(data) {
+					renderTree(data);
+					$.getJSON('/messageCount',
+						function(count){
+							$('#messageCount').text('Number of messages: ' + count);
+						});				
+				});
+		});
+
+	</script>
+
+</head>
+<body>
+<ul class="menu">
+    <li><a href="#/nxtchat">Nxt Chat</a></li>
+    <li><a href="#/nxtgraph">Nxt Asset Graph</a></li>
+</ul>
+	<div class="wrap">
+		<div class="left_col">
+			<h2><span id="messageCount">@messageCount</span></h2>
+
+			<div id="chat_tree"></div>
+		</div>
+		<div class="right_col">
+			This is an experiment using Nxt Messages.<br>If you wish to sponsor further dev time,<br> tokens are much appreciated to
+			<br><b>NXT-67QT-79JL-VEMZ-739MH</b>
+		</div>
+	</div>
+</body>
+</html>
