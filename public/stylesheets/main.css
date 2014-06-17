@@ -1,0 +1,39 @@
+*, *:before, *:after {
+  -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box;
+}
+
+body { margin: 0; }
+
+.wrap { position: relative; margin: .5em; }
+
+.left_col {  border: 1px solid  #ccc; padding: 1.25em; margin-bottom: .5em; }
+
+.right_col { border: 1px solid  #ccc; padding: 1.25em; }
+
+@media screen and (min-width: 50.5em ) {
+  .left_col { margin-right: 22.5em; }
+  .right_col { position: absolute; top: 0; right: 0; width: 21.75em; }
+}
+
+.menu {
+  list-style: none;
+  border-bottom: 0.1em solid black;
+  margin-bottom: 1em;
+  padding: 0 0 0.5em;
+  margin-left: 1em;
+  margin-right: 1em;
+}
+
+.menu > li {
+  display: inline;
+}
+
+.menu > li:before {
+  content: "|";
+  padding-right: 0.3em;
+}
+
+.menu > li:nth-child(1):before {
+  content: "";
+  padding: 0;
+}

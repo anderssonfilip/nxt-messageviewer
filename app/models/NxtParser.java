@@ -1,9 +1,11 @@
 package models;
 
-import actors.MainActor;
+import actors.MessageActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import play.libs.Json;
 import scala.concurrent.duration.Duration;
 
 import java.sql.*;
@@ -12,22 +14,104 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+
 public class NxtParser {
 
     private static final char[] hexChars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
     private static int _messageCount;
+    private static int _textMessageCount;
     private static int _maxHeight;
 
-    private static ActorSystem system = null;
+    private ActorSystem system = null;
 
-    private static HashMap<String, HashMap<String, List<Tuple2<String, Integer>>>> conversations;
+    public static final boolean useReedSolomonAddresses = true;
 
-    public static HashMap<String, HashMap<String, List<Tuple2<String, Integer>>>> AddMessage() {
-        return conversations;
+    private static HashMap<String, HashMap<String, List<Tuple3<String, Integer, Boolean>>>> conversations;
+
+    public static ObjectNode ParseMessage(long sender,
+                                          long recipient,
+                                          int height,
+                                          String attachment_bytes) {
+        _messageCount++;
+
+        String message = convertHexToString(attachment_bytes);
+
+        if (sender == recipient) { // skip messages sent to self
+            return null;
+        }
+
+        if (isBinaryMessage(message)) {
+            return null;
+        }
+
+        if (message.trim().isEmpty()) {
+            return null;
+        }
+
+        _textMessageCount++;
+
+        if (height > _maxHeight)
+            _maxHeight = height;
+
+        if (useReedSolomonAddresses) {
+
+            String s = "NXT-" + crypto.ReedSolomon.encode(sender);
+            String r = "NXT-" + crypto.ReedSolomon.encode(recipient);
+
+            AddMessage(s, r, message, height);
+
+            return Json.newObject()
+                    .put("type", "message")
+                    .put("sender", s)
+                    .put("recipient", r)
+                    .put("text", message)
+                    .put("height", height);
+        } else {
+
+            AddMessage(Long.toString(sender), Long.toString(recipient), message, height);
+
+            return Json.newObject()
+                    .put("type", "message")
+                    .put("sender", sender)
+                    .put("recipient", recipient)
+                    .put("text", message)
+                    .put("height", height);
+        }
     }
 
-    public static HashMap<String, HashMap<String, List<Tuple2<String, Integer>>>> readDatabase(String h2Url) {
+
+    private static void AddMessage(String sender,
+                                   String recipient,
+                                   String message,
+                                   int height) {
+
+        if (conversations.containsKey(recipient)) {
+            if (conversations.get(recipient).containsKey(sender)) {
+                conversations.get(recipient).get(sender).add(new Tuple3<>(message, height, false));
+            }
+        } else {
+
+            if (conversations.containsKey(sender) && conversations.get(sender).containsKey(recipient)) {
+                conversations.get(sender).get(recipient).add(new Tuple3<>(message, height, true));
+            } else {
+                List<Tuple3<String, Integer, Boolean>> messages = new ArrayList<>();
+                messages.add(new Tuple3<>(message, height, true));
+
+                if (conversations.containsKey(sender)) {
+                    conversations.get(sender).put(recipient, messages);
+                } else {
+                    HashMap<String, List<Tuple3<String, Integer, Boolean>>> intro = new HashMap<>();
+
+                    intro.put(recipient, messages);
+                    conversations.put(sender, intro);
+                }
+            }
+        }
+    }
+
+
+    public HashMap<String, HashMap<String, List<Tuple3<String, Integer, Boolean>>>> readDatabase() {
 
         if (conversations != null) {
             return conversations;
@@ -37,57 +121,26 @@ public class NxtParser {
             Connection conn;
             Statement stat;
             try {
-                conn = DriverManager.getConnection(h2Url, "sa", "sa");
+
+                String url = play.Play.application().configuration().getString("db.nxt.url");
+                String user = play.Play.application().configuration().getString("db.nxt.user");
+                String password = play.Play.application().configuration().getString("db.nxt.user");
+
+                conn = DriverManager.getConnection(url, user, password);
                 stat = conn.createStatement();
 
                 _messageCount = 0;
+                _textMessageCount = 0;
 
                 ResultSet rs = stat.executeQuery("select id, sender_id, recipient_id, height, attachment_bytes from transaction where type = 1 AND subtype = 0 order by height asc");
                 while (rs.next()) {
 
-                    _messageCount++;
-
-                    String sender = rs.getString("sender_id");
-                    String recipient = rs.getString("recipient_id");
+                    long sender = rs.getLong("sender_id");
+                    long recipient = rs.getLong("recipient_id");
                     int height = rs.getInt("height");
                     String attachment_bytes = rs.getString("attachment_bytes");
 
-                    String message = convertHexToString(attachment_bytes);
-
-                    if (sender.equals(recipient)) { // skip messages sent to self
-                        continue;
-                    }
-
-                    if (isBinaryMessage(message)) {
-                        continue;
-                    }
-
-                    if (message.trim().isEmpty()) {
-                        continue;
-                    }
-
-                    if (conversations.containsKey(recipient)) {
-                        if (conversations.get(recipient).containsKey(sender)) {
-                            conversations.get(recipient).get(sender).add(new Tuple2<>(message, height));
-                        }
-                    } else {
-                        List<Tuple2<String, Integer>> messages = new ArrayList<>();
-                        messages.add(new Tuple2<>(message, height));
-
-                        if (conversations.containsKey(sender) && conversations.get(sender).containsKey(recipient)) {
-                            conversations.get(sender).get(recipient).add(new Tuple2<>(message, height));
-                        } else if (conversations.containsKey(sender)) {
-                            conversations.get(sender).put(recipient, messages);
-                        } else {
-                            HashMap<String, List<Tuple2<String, Integer>>> intro = new HashMap<>();
-
-                            intro.put(recipient, messages);
-                            conversations.put(sender, intro);
-                        }
-                    }
-
-                    if (height > _maxHeight)
-                        _maxHeight = height;
+                    ParseMessage(sender, recipient, height, attachment_bytes);
                 }
                 stat.close();
                 conn.close();
@@ -99,7 +152,7 @@ public class NxtParser {
 
             if (system == null) {
                 system = ActorSystem.create("actorSystem");
-                ActorRef a = system.actorOf(Props.create(MainActor.class), "mainActor");
+                ActorRef a = system.actorOf(Props.create(MessageActor.class), "mainActor");
 
                 system.scheduler().scheduleOnce(Duration.create(5, TimeUnit.SECONDS), a, _maxHeight, system.dispatcher(), null);
             }
@@ -108,8 +161,16 @@ public class NxtParser {
         }
     }
 
-    public static int getMessageCount() {
+    public int getMessageCount() {
         return _messageCount;
+    }
+
+    public int getTextMessageCount() {
+        return _textMessageCount;
+    }
+
+    public int getBlockHeight() {
+        return _maxHeight;
     }
 
     public static String convertHexToString(String hex) {

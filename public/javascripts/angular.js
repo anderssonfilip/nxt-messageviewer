@@ -17,6 +17,13 @@ app.factory('assetService', ['$http',
     }
 ]);
 
+.
+config(['$routeProvider', function($routeProvider) {
+  $routeProvider.when('/nxtchat', {templateUrl: 'nxtchat.html', controller: 'NxtChat'});
+  $routeProvider.when('/nxtgraph', {templateUrl: 'nxtgraph..html', controller: 'NxtChat'});
+  $routeProvider.otherwise({redirectTo: '/nxtchat'});
+}]);
+
 // Executed after all of the service have been configured and the injector has been created.
 // The closest thing in Angular to the main method
 app.run(function($rootScope) {
@@ -24,7 +31,9 @@ app.run(function($rootScope) {
 });
 
 
-app.controller('MyController', ['$scope', '$http', 'assetService',
+
+
+app.controller('NxtChat', ['$scope', '$http', 'assetService',
     function($scope, $http, assetService) {
 
         $scope.loadAssets = function() {
@@ -53,3 +62,7 @@ app.controller('MyController', ['$scope', '$http', 'assetService',
 
     }
 ]);
+
+app.controller('NxtGraph', ['$scope', function($scope) {
+
+}]);
